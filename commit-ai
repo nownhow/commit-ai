@@ -1,0 +1,49 @@
+#!/bin/bash
+file=$1
+commit_message=$(cat "$file")
+
+GEMINI_API_KEY=$(cat ~/.gemini-key)
+
+# Changed files (staged only)
+changed_files=$(git diff --cached --name-only)
+
+file_contents=""
+for f in $changed_files; do
+  content=$(git show ":$f" | head -n 500)
+  file_contents="$file_contents\n\n=== File: $f ===\n$content"
+done
+
+# Call Gemini API
+response=$(curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent" \
+  -H "Content-Type: application/json" \
+  -H "X-goog-api-key: $GEMINI_API_KEY" \
+  -X POST \
+  -d "{
+    \"contents\": [{
+      \"parts\":[{
+        \"text\": \"You are a git commit message reviewer. 
+        Rules:
+        - Must be imperative (e.g. 'Fix bug', not 'Fixed bug')
+        - Subject line under 72 characters
+        - Should describe what the commit does, not how
+        - Do not repeat the promt, make it short and understandable
+        - Code should follow best practices (lint, readability, no obvious bugs)
+        - Respond with VALID or INVALID + reason
+        Check this commit message: '$commit_message'
+        Changed files and contents: $file_contents \"
+      }]
+    }]
+  }")
+
+# Extract text reply
+review=$(echo "$response" | jq -r '.candidates[0].content.parts[0].text')
+
+echo "Gemini review: $review"
+
+if echo "$review" | grep -qi "invalid"; then
+  echo "❌ Commit message rejected."
+  exit 1
+fi
+
+echo "✅ Commit message approved."
+exit 0
