@@ -1,0 +1,2 @@
+cd your-project/.git/hooks
+nano commit-msg
