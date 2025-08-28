@@ -2,7 +2,7 @@
 Using **AI** to review your commit message and staged files 
 
 ## Implementation
-1. Add "commit-ai" file to **.git/hooks/**
+1. Add "commit-ai" file to **your_project_path/.git/hooks/**
 2. Run 
 ```bash 
  chmod +x .git/hooks/commit-ai
